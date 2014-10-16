@@ -4,8 +4,9 @@
 .settings
 
 # IntelliJ IDEA
+/build
 .idea
-*.iml
+android-logger.iml
 *.ipr
 *.iws
 
