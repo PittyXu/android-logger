@@ -35,6 +35,9 @@ import org.slf4j.spi.LoggerFactoryBinder;
  */
 public class StaticLoggerBinder implements LoggerFactoryBinder {
 
+    /**
+     * The unique instance of this class.
+     */
     private static final StaticLoggerBinder SINGLETON = new StaticLoggerBinder();
 
     /**
@@ -46,8 +49,17 @@ public class StaticLoggerBinder implements LoggerFactoryBinder {
         return SINGLETON;
     }
 
-    private final String loggerFactoryClassStr = AndroidLoggerFactory.class.getName();
-    private final ILoggerFactory loggerFactory = new AndroidLoggerFactory();
+    private static final String loggerFactoryClassStr = AndroidLoggerFactory.class.getName();
+
+    /**
+     * The ILoggerFactory instance returned by the {@link #getLoggerFactory} method
+     * should always be the same object
+     */
+    private final ILoggerFactory loggerFactory;
+
+    private StaticLoggerBinder() {
+        loggerFactory = new AndroidLoggerFactory();
+    }
 
     @Override
     public ILoggerFactory getLoggerFactory() {
@@ -58,5 +70,4 @@ public class StaticLoggerBinder implements LoggerFactoryBinder {
     public String getLoggerFactoryClassStr() {
         return loggerFactoryClassStr;
     }
-
 }

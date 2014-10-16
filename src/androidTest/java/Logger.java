@@ -24,12 +24,10 @@
  * THE SOFTWARE.
  */
 
-package com.noveogroup.android.log;
-
 import android.util.Log;
 
 /**
- * Helper for sending log messages using the standard {@link Log}.
+ * Helper for sending log messages using the standard {@link android.util.Log}.
  */
 public interface Logger {
 
@@ -44,7 +42,7 @@ public interface Logger {
     public static enum Level {
 
         /**
-         * Corresponding constant for {@link Log#VERBOSE}.
+         * Corresponding constant for {@link android.util.Log#VERBOSE}.
          *
          * @see Logger#v(Throwable, String, Object...)
          * @see Logger#v(String, Object...)
@@ -52,7 +50,7 @@ public interface Logger {
          */
         VERBOSE(Log.VERBOSE),
         /**
-         * Corresponding constant for {@link Log#DEBUG}.
+         * Corresponding constant for {@link android.util.Log#DEBUG}.
          *
          * @see Logger#d(Throwable, String, Object...)
          * @see Logger#d(String, Object...)
@@ -60,7 +58,7 @@ public interface Logger {
          */
         DEBUG(Log.DEBUG),
         /**
-         * Corresponding constant for {@link Log#INFO}.
+         * Corresponding constant for {@link android.util.Log#INFO}.
          *
          * @see Logger#i(Throwable, String, Object...)
          * @see Logger#i(String, Object...)
@@ -68,7 +66,7 @@ public interface Logger {
          */
         INFO(Log.INFO),
         /**
-         * Corresponding constant for {@link Log#WARN}.
+         * Corresponding constant for {@link android.util.Log#WARN}.
          *
          * @see Logger#w(Throwable, String, Object...)
          * @see Logger#w(String, Object...)
@@ -76,7 +74,7 @@ public interface Logger {
          */
         WARN(Log.WARN),
         /**
-         * Corresponding constant for {@link Log#ERROR}.
+         * Corresponding constant for {@link android.util.Log#ERROR}.
          *
          * @see Logger#e(Throwable, String, Object...)
          * @see Logger#e(String, Object...)
@@ -84,7 +82,7 @@ public interface Logger {
          */
         ERROR(Log.ERROR),
         /**
-         * Corresponding constant for {@link Log#ASSERT}.
+         * Corresponding constant for {@link android.util.Log#ASSERT}.
          *
          * @see Logger#a(Throwable, String, Object...)
          * @see Logger#a(String, Object...)
@@ -99,9 +97,9 @@ public interface Logger {
         }
 
         /**
-         * Returns int value of the priority as it declared in {@link Log}.
+         * Returns int value of the priority as it declared in {@link android.util.Log}.
          *
-         * @return The integer value of corresponding constant from {@link Log} class.
+         * @return The integer value of corresponding constant from {@link android.util.Log} class.
          */
         public int intValue() {
             return intValue;

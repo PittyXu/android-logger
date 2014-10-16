@@ -26,199 +26,531 @@
 
 package org.slf4j.impl;
 
-import com.noveogroup.android.log.Logger;
+import android.util.Log;
+import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MarkerIgnoringBase;
 import org.slf4j.helpers.MessageFormatter;
 
 /**
- * A wrapper over {@link com.noveogroup.android.log.Logger com.noveogroup.android.log.Logger}
- * in conforming to the {@link org.slf4j.Logger org.slf4j.Logger} interface.
+ *  * <p>A simple implementation that delegates all log requests to the Google Android
+ * logging facilities. Note that this logger does not support {@link org.slf4j.Marker}.
+ * Methods taking marker data as parameter simply invoke the eponymous method
+ * without the Marker argument, discarding any marker data in the process.</p>
+ *
+ * <p>The logging levels specified for SLF4J can be almost directly mapped to
+ * the levels that exist in the Google Android platform. The following table
+ * shows the mapping implemented by this logger.</p>
+ *
+ * <table border="1">
+ * <tr><th><b>SLF4J<b></th><th><b>Android</b></th></tr>
+ * <tr><td>TRACE</td><td>{@link android.util.Log#VERBOSE}</td></tr>
+ * <tr><td>DEBUG</td><td>{@link android.util.Log#DEBUG}</td></tr>
+ * <tr><td>INFO</td><td>{@link android.util.Log#INFO}</td></tr>
+ * <tr><td>WARN</td><td>{@link android.util.Log#WARN}</td></tr>
+ * <tr><td>ERROR</td><td>{@link android.util.Log#ERROR}</td></tr>
+ * </table>
+ *
+ * <p>Use loggers as usual:
+ * <ul>
+ *     <li>
+ *         Declare a logger<br/>
+ *         <code>private static final Logger logger = LoggerFactory.getLogger(MyClass.class);</code>
+ *     </li>
+ *     <li>
+ *         Invoke logging methods, e.g.,<br/>
+ *         <code>logger.debug("Some log message. Details: {}", someObject);</code><br/>
+ *         <code>logger.debug("Some log message with varargs. Details: {}, {}, {}", someObject1, someObject2, someObject3);</code>
+ *     </li>
+ * </ul>
+ * </p>
+ *
+ * <p>Logger instances created using the LoggerFactory are named either according to the name
+ * or the fully qualified class name of the class given as a parameter.
+ * Each logger name will be used as the log message tag on the Android platform.
+ * However, tag names cannot be longer than 23 characters so if logger name exceeds this limit then
+ * it will be truncated by the LoggerFactory. The following examples illustrate this.
+ * <table border="1">
+ * <tr><th><b>Original Name<b></th><th><b>Truncated Name</b></th></tr>
+ * <tr><td>org.example.myproject.mypackage.MyClass</td><td>o*.e*.m*.m*.MyClass</td></tr>
+ * <tr><td>o.e.myproject.mypackage.MyClass</td><td>o.e.m*.m*.MyClass</td></tr>
+ * <tr><td>org.example.ThisNameIsWayTooLongAndWillBeTruncated</td><td>*LongAndWillBeTruncated</td></tr>
+ * <tr><td>ThisNameIsWayTooLongAndWillBeTruncated</td><td>*LongAndWillBeTruncated</td></tr>
+ * </table>
+ * </p>
+ *
  */
 public class AndroidLoggerAdapter extends MarkerIgnoringBase {
 
-    private final Logger logger;
-
     /**
+     * Package access allows only {@link org.slf4j.impl.AndroidLoggerFactory} to instantiate
+     * SimpleLogger instances.
      * Creates new instance of {@link AndroidLoggerAdapter}.
      *
-     * @param logger the underlying logger.
+     * @param tag the logger tag.
      */
-    public AndroidLoggerAdapter(Logger logger) {
-        this.logger = logger;
+    AndroidLoggerAdapter(String tag) {
+        this.name = tag;
     }
 
-    private boolean isEnabled(Logger.Level level) {
-        return logger.isEnabled(level);
-    }
-
-    private void log(Logger.Level level, String msg) {
-        logger.print(level, msg, null);
-    }
-
-    private void log(Logger.Level level, String format, Object arg) {
-        logger.print(level, MessageFormatter.format(format, arg).getMessage(), null);
-    }
-
-    private void log(Logger.Level level, String format, Object arg1, Object arg2) {
-        logger.print(level, MessageFormatter.format(format, arg1, arg2).getMessage(), null);
-    }
-
-    private void log(Logger.Level level, String format, Object... arguments) {
-        logger.print(level, MessageFormatter.arrayFormat(format, arguments).getMessage(), null);
-    }
-
-    private void log(Logger.Level level, String msg, Throwable t) {
-        logger.print(level, msg, t);
-    }
-
-    @Override
+    /**
+     * Is this logger instance enabled for the VERBOSE level?
+     *
+     * @return True if this Logger is enabled for level VERBOSE, false otherwise.
+     */
     public boolean isTraceEnabled() {
-        return isEnabled(Logger.Level.VERBOSE);
+        return isLoggable(Log.VERBOSE);
     }
 
-    @Override
+    /**
+     * Log a message object at level VERBOSE.
+     *
+     * @param msg
+     *          - the message object to be logged
+     */
     public void trace(String msg) {
-        log(Logger.Level.VERBOSE, msg);
+        log(Log.VERBOSE, msg, null);
     }
 
-    @Override
+    /**
+     * Log a message at level VERBOSE according to the specified format and
+     * argument.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for level VERBOSE.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg
+     *          the argument
+     */
     public void trace(String format, Object arg) {
-        log(Logger.Level.VERBOSE, format, arg);
+        formatAndLog(Log.VERBOSE, format, arg);
     }
 
-    @Override
+    /**
+     * Log a message at level VERBOSE according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the VERBOSE level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg1
+     *          the first argument
+     * @param arg2
+     *          the second argument
+     */
     public void trace(String format, Object arg1, Object arg2) {
-        log(Logger.Level.VERBOSE, format, arg1, arg2);
+        formatAndLog(Log.VERBOSE, format, arg1, arg2);
     }
 
-    @Override
-    public void trace(String format, Object... arguments) {
-        log(Logger.Level.VERBOSE, format, arguments);
+    /**
+     * Log a message at level VERBOSE according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the VERBOSE level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param argArray
+     *          an array of arguments
+     */
+    public void trace(String format, Object... argArray) {
+        formatAndLog(Log.VERBOSE, format, argArray);
     }
 
-    @Override
+    /**
+     * Log an exception (throwable) at level VERBOSE with an accompanying message.
+     *
+     * @param msg
+     *          the message accompanying the exception
+     * @param t
+     *          the exception (throwable) to log
+     */
     public void trace(String msg, Throwable t) {
-        log(Logger.Level.VERBOSE, msg, t);
+        log(Log.VERBOSE, msg, t);
     }
 
-    @Override
+    /**
+     * Is this logger instance enabled for the DEBUG level?
+     *
+     * @return True if this Logger is enabled for level DEBUG, false otherwise.
+     */
     public boolean isDebugEnabled() {
-        return isEnabled(Logger.Level.DEBUG);
+        return isLoggable(Log.DEBUG);
     }
 
-    @Override
+    /**
+     * Log a message object at level DEBUG.
+     *
+     * @param msg
+     *          - the message object to be logged
+     */
     public void debug(String msg) {
-        log(Logger.Level.DEBUG, msg);
+        log(Log.DEBUG, msg, null);
     }
 
-    @Override
+    /**
+     * Log a message at level DEBUG according to the specified format and argument.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for level DEBUG.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg
+     *          the argument
+     */
     public void debug(String format, Object arg) {
-        log(Logger.Level.DEBUG, format, arg);
+        formatAndLog(Log.DEBUG, format, arg);
     }
 
-    @Override
+    /**
+     * Log a message at level DEBUG according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the DEBUG level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg1
+     *          the first argument
+     * @param arg2
+     *          the second argument
+     */
     public void debug(String format, Object arg1, Object arg2) {
-        log(Logger.Level.DEBUG, format, arg1, arg2);
+        formatAndLog(Log.DEBUG, format, arg1, arg2);
     }
 
-    @Override
-    public void debug(String format, Object... arguments) {
-        log(Logger.Level.DEBUG, format, arguments);
+    /**
+     * Log a message at level DEBUG according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the DEBUG level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param argArray
+     *          an array of arguments
+     */
+    public void debug(String format, Object... argArray) {
+        formatAndLog(Log.DEBUG, format, argArray);
     }
 
-    @Override
+    /**
+     * Log an exception (throwable) at level DEBUG with an accompanying message.
+     *
+     * @param msg
+     *          the message accompanying the exception
+     * @param t
+     *          the exception (throwable) to log
+     */
     public void debug(String msg, Throwable t) {
-        log(Logger.Level.DEBUG, msg, t);
+        log(Log.VERBOSE, msg, t);
     }
 
-    @Override
+    /**
+     * Is this logger instance enabled for the INFO level?
+     *
+     * @return True if this Logger is enabled for the INFO level, false otherwise.
+     */
     public boolean isInfoEnabled() {
-        return isEnabled(Logger.Level.INFO);
+        return isLoggable(Log.INFO);
     }
 
-    @Override
+    /**
+     * Log a message object at the INFO level.
+     *
+     * @param msg
+     *          - the message object to be logged
+     */
     public void info(String msg) {
-        log(Logger.Level.INFO, msg);
+        log(Log.INFO, msg, null);
     }
 
-    @Override
+    /**
+     * Log a message at level INFO according to the specified format and argument.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the INFO level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg
+     *          the argument
+     */
     public void info(String format, Object arg) {
-        log(Logger.Level.INFO, format, arg);
+        formatAndLog(Log.INFO, format, arg);
     }
 
-    @Override
+    /**
+     * Log a message at the INFO level according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the INFO level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg1
+     *          the first argument
+     * @param arg2
+     *          the second argument
+     */
     public void info(String format, Object arg1, Object arg2) {
-        log(Logger.Level.INFO, format, arg1, arg2);
+        formatAndLog(Log.INFO, format, arg1, arg2);
     }
 
-    @Override
-    public void info(String format, Object... arguments) {
-        log(Logger.Level.INFO, format, arguments);
+    /**
+     * Log a message at level INFO according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the INFO level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param argArray
+     *          an array of arguments
+     */
+    public void info(String format, Object... argArray) {
+        formatAndLog(Log.INFO, format, argArray);
     }
 
-    @Override
+    /**
+     * Log an exception (throwable) at the INFO level with an accompanying
+     * message.
+     *
+     * @param msg
+     *          the message accompanying the exception
+     * @param t
+     *          the exception (throwable) to log
+     */
     public void info(String msg, Throwable t) {
-        log(Logger.Level.INFO, msg, t);
+        log(Log.INFO, msg, t);
     }
 
-    @Override
+    /**
+     * Is this logger instance enabled for the WARN level?
+     *
+     * @return True if this Logger is enabled for the WARN level, false
+     *         otherwise.
+     */
     public boolean isWarnEnabled() {
-        return isEnabled(Logger.Level.WARN);
+        return isLoggable(Log.WARN);
     }
 
-    @Override
+    /**
+     * Log a message object at the WARN level.
+     *
+     * @param msg
+     *          - the message object to be logged
+     */
     public void warn(String msg) {
-        log(Logger.Level.WARN, msg);
+        log(Log.WARN, msg, null);
     }
 
-    @Override
+    /**
+     * Log a message at the WARN level according to the specified format and
+     * argument.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the WARN level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg
+     *          the argument
+     */
     public void warn(String format, Object arg) {
-        log(Logger.Level.WARN, format, arg);
+        formatAndLog(Log.WARN, format, arg);
     }
 
-    @Override
+    /**
+     * Log a message at the WARN level according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the WARN level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg1
+     *          the first argument
+     * @param arg2
+     *          the second argument
+     */
     public void warn(String format, Object arg1, Object arg2) {
-        log(Logger.Level.WARN, format, arg1, arg2);
+        formatAndLog(Log.WARN, format, arg1, arg2);
     }
 
-    @Override
-    public void warn(String format, Object... arguments) {
-        log(Logger.Level.WARN, format, arguments);
+    /**
+     * Log a message at level WARN according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the WARN level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param argArray
+     *          an array of arguments
+     */
+    public void warn(String format, Object... argArray) {
+        formatAndLog(Log.WARN, format, argArray);
     }
 
-    @Override
+    /**
+     * Log an exception (throwable) at the WARN level with an accompanying
+     * message.
+     *
+     * @param msg
+     *          the message accompanying the exception
+     * @param t
+     *          the exception (throwable) to log
+     */
     public void warn(String msg, Throwable t) {
-        log(Logger.Level.WARN, msg, t);
+        log(Log.WARN, msg, t);
     }
 
-    @Override
+    /**
+     * Is this logger instance enabled for level ERROR?
+     *
+     * @return True if this Logger is enabled for level ERROR, false otherwise.
+     */
     public boolean isErrorEnabled() {
-        return isEnabled(Logger.Level.ERROR);
+        return isLoggable(Log.ERROR);
     }
 
-    @Override
+    /**
+     * Log a message object at the ERROR level.
+     *
+     * @param msg
+     *          - the message object to be logged
+     */
     public void error(String msg) {
-        log(Logger.Level.ERROR, msg);
+        log(Log.ERROR, msg, null);
     }
 
-    @Override
+    /**
+     * Log a message at the ERROR level according to the specified format and
+     * argument.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the ERROR level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg
+     *          the argument
+     */
     public void error(String format, Object arg) {
-        log(Logger.Level.ERROR, format, arg);
+        formatAndLog(Log.ERROR, format, arg);
     }
 
-    @Override
+    /**
+     * Log a message at the ERROR level according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the ERROR level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param arg1
+     *          the first argument
+     * @param arg2
+     *          the second argument
+     */
     public void error(String format, Object arg1, Object arg2) {
-        log(Logger.Level.ERROR, format, arg1, arg2);
+        formatAndLog(Log.ERROR, format, arg1, arg2);
     }
 
-    @Override
-    public void error(String format, Object... arguments) {
-        log(Logger.Level.ERROR, format, arguments);
+    /**
+     * Log a message at level ERROR according to the specified format and
+     * arguments.
+     *
+     * <p>
+     * This form avoids superfluous object creation when the logger is disabled
+     * for the ERROR level.
+     * </p>
+     *
+     * @param format
+     *          the format string
+     * @param argArray
+     *          an array of arguments
+     */
+    public void error(String format, Object... argArray) {
+        formatAndLog(Log.ERROR, format, argArray);
     }
 
-    @Override
+    /**
+     * Log an exception (throwable) at the ERROR level with an accompanying
+     * message.
+     *
+     * @param msg
+     *          the message accompanying the exception
+     * @param t
+     *          the exception (throwable) to log
+     */
     public void error(String msg, Throwable t) {
-        log(Logger.Level.ERROR, msg, t);
+        log(Log.ERROR, msg, t);
     }
 
+    private void formatAndLog(int priority, String format, Object... argArray) {
+        if (isLoggable(priority)) {
+            FormattingTuple ft = MessageFormatter.arrayFormat(format, argArray);
+            _log(priority, ft.getMessage(), ft.getThrowable());
+        }
+    }
+
+    private void log(int priority, String message, Throwable throwable) {
+        if (isLoggable(priority)) {
+            _log(priority, message, throwable);
+        }
+    }
+
+    private boolean isLoggable(int priority) {
+        return handler != null && handler.isEnabled(level);
+        return Log.isLoggable(name, priority);
+    }
+
+    private void _log(int priority, String message, Throwable throwable) {
+        if (throwable != null) {
+            message += '\n' + Log.getStackTraceString(throwable);
+        }
+        Log.println(priority, name, message);
+    }
 }
